@@ -2,7 +2,72 @@ import streamlit as st
 import pickle
 import re
 
-# best threshold
+# ===============================
+# PAGE CONFIG (MUST BE FIRST)
+# ===============================
+st.set_page_config(
+    page_title="Amazon Dine Review Intelligence",
+    page_icon="🍽️",
+    layout="wide"
+)
+
+# ===============================
+# CUSTOM CSS (🔥 UI MAGIC)
+# ===============================
+st.markdown("""
+<style>
+
+/* Main title */
+.main-title {
+    font-size: 42px;
+    font-weight: 800;
+    text-align: center;
+    background: linear-gradient(90deg, #FF4B4B, #FF9F1C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+}
+
+/* Subtitle */
+.subtitle {
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 30px;
+}
+
+/* Result card */
+.result-card {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+/* Sentiment badge */
+.badge-positive {
+    background-color: #e6f4ea;
+    color: #1e7e34;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.badge-negative {
+    background-color: #fdecea;
+    color: #c62828;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ===============================
+# MODEL SETTINGS
+# ===============================
 BEST_THRESHOLD = 0.70
 
 def clean_text(text):
@@ -20,7 +85,7 @@ def load_artifacts():
 model, vectorizer = load_artifacts()
 
 # ===============================
-# TOPIC / ISSUE DETECTION
+# TOPIC DETECTION
 # ===============================
 TOPIC_KEYWORDS = {
     "Delivery Issue": ["late", "delay", "slow delivery", "not delivered"],
@@ -39,61 +104,54 @@ def detect_topics(text):
 
     return found
 
-# ==================
-# UI
-# ==================
-st.set_page_config(
-    page_title="Amazon Dine Review Intelligence",
-    page_icon="🍽️",
-    layout="centered"
-)
-
-st.title("Amazon Dine Review Intelligence")
+# ===============================
+# HEADER UI
+# ===============================
+st.markdown('<div class="main-title">🍽️ Amazon Dine Review Intelligence</div>', unsafe_allow_html=True)
 st.markdown(
-    "Analyze customer reviews using NLP to detect sentiment and key issues."
+    '<div class="subtitle">Analyze customer reviews using NLP to detect sentiment and key issues</div>',
+    unsafe_allow_html=True
 )
 
+# ===============================
+# INPUT
+# ===============================
 review = st.text_area(
     "✍️ Enter customer review:",
-    height=150,
+    height=180,
     placeholder="Example: Food was cold and delivery was very late..."
 )
 
-if st.button("Analyze"):
+analyze_btn = st.button("🔍 Analyze Review", use_container_width=True)
+
+# ===============================
+# PREDICTION
+# ===============================
+if analyze_btn:
 
     if review.strip() == "":
-        st.warning("Please enter a review.")
+        st.warning("⚠️ Please enter a review.")
         st.stop()
 
-    # clean
     clean_review = clean_text(review)
-
-    # vectorize
     vectorized_review = vectorizer.transform([clean_review])
-
-    # probability
     prob = model.predict_proba(vectorized_review)[0, 1]
-
-    # threshold decision
     pred = int(prob >= BEST_THRESHOLD)
 
     sentiment_label = "Positive 😊" if pred == 0 else "Negative 😞"
-
-    # topic
     topics = detect_topics(clean_review)
 
+    ## RESULTS
+    st.markdown("### 📊 Result")
 
+    badge_class = "badge-positive" if pred == 0 else "badge-negative"
 
-## RESULTS
-    st.subheader("Analyzed Results")
+    st.markdown(
+        f'<span class="{badge_class}">{sentiment_label}</span>',
+        unsafe_allow_html=True
+    )
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric("Sentiment", sentiment_label)
-
-    with col2:
-        st.metric("Confidence", f"{prob:.2f}")
+    st.caption(f"Confidence: {prob:.2f}")
 
     st.markdown("### 🔎 Detected Issues")
 
@@ -102,7 +160,3 @@ if st.button("Analyze"):
             st.write(f"• {topic}")
     else:
         st.write("✅ No major issues detected")
-
-
-
-
